@@ -53,18 +53,20 @@ void setInitialState(bool** grid, ifstream& init_file, unsigned int grid_width, 
 }
 
 
-void findNeighbors(bool* neighbors, bool** grid, unsigned int grid_width, unsigned int grid_depth, int target_y; int target_x)
+// Sum the values of each neighboring cell in the grid and return it
+// Since the grid is a bool array, should be equal to number of live cells
+int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_depth, int target_y; int target_x)
 {
-    unsigned int count = 0;
+    unsigned int live_neighbors = 0;
     for (int y = target_y - 1; y <= target_y + 1; ++y) {
         for (int x = target_x - 1; x <= target_x + 1; ++x) {
             if (y == target_y && x == target_x) // ignore target itself
                 continue
             // add length of row/column to offset effect of negative int in mod calculation
-            neighbors[count] = grid[(y + grid_depth) % grid_depth][(x + grid_width) % grid_width];
-            ++count;
+            live_neighbors += grid[(y + grid_depth) % grid_depth][(x + grid_width) % grid_width];
         }
     }
+    return live_neighbors;
 }
 
 
@@ -72,6 +74,8 @@ void writeNextFrame(bool** grid, unsigned int grid_width, unsigned int grid_dept
 {
     // call findNeighbors on each element in grid and change value based on Conway's rules
     // create a second grid object to read from so calculations aren't affected by new frame being drawn
+
+
 }
 
 void runGame(unsigned int turns, bool** grid)
