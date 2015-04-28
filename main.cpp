@@ -1,10 +1,9 @@
 /* To-Do:
 
-- write rules for cells living/dying
 - add checks for input size during setInitialState()
 - add check for correct character values when initializing grid
 - add function to randomly generate an initial state, given grid dimensions
-- implement exceptions where marked
+- implement exceptions where noted
 - learn ncurses to implement graphics
 */
 
@@ -55,13 +54,13 @@ void setInitialState(bool** grid, ifstream& init_file, unsigned int grid_width, 
 
 // Sum the values of each neighboring cell in the grid and return it
 // Since the grid is a bool array, should be equal to number of live cells
-int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_depth, int target_y; int target_x)
+unsigned int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_depth, int target_y, int target_x)
 {
     unsigned int live_neighbors = 0;
     for (int y = target_y - 1; y <= target_y + 1; ++y) {
         for (int x = target_x - 1; x <= target_x + 1; ++x) {
             if (y == target_y && x == target_x) // ignore target itself
-                continue
+                continue;
             // add length of row/column to offset effect of negative int in mod calculation
             live_neighbors += grid[(y + grid_depth) % grid_depth][(x + grid_width) % grid_width];
         }
@@ -70,13 +69,38 @@ int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_depth
 }
 
 
-void writeNextFrame(bool** grid, unsigned int grid_width, unsigned int grid_depth)
+// write values of cells in next frame to a buffer
+void writeNextFrame(bool** grid, bool** buffer, unsigned int grid_width, unsigned int grid_depth)
 {
-    // call findNeighbors on each element in grid and change value based on Conway's rules
-    // create a second grid object to read from so calculations aren't affected by new frame being drawn
+    // buffer will have already been created at this point
+    unsigned int live_neighbors;
 
+    for (unsigned int y = 0; y < grid_depth; ++y) {
+        for (unsigned int x = 0; x < grid_width; ++x) {
+            live_neighbors = countNeighbors(grid, grid_width, grid_depth, y, x);
 
+            // live cell with fewer than two live neighbors dies (under-population)
+            if (grid[y][x] && live_neighbors < 2 )
+                buffer[y][x] = false;
+
+            // live cell with two or three live neighbors lives on to next generation
+            else if ((grid[y][x]) && (live_neighbors == 2 || live_neighbors == 3))
+                buffer[y][x] = true;
+
+            // live cell with more than three neighbors dies (over-population)
+            else if (grid[y][x] && live_neighbors > 3)
+                buffer[y][x] = false;
+
+            // dead cell with exactly three live neighbors becomes a live cell (reproduction)
+            else if (!grid[y][x] && live_neighbors == 3)
+                buffer[y][x] = true;
+
+            else
+                buffer[y][x] = true;
+        }
+    }
 }
+
 
 void runGame(unsigned int turns, bool** grid)
 {
@@ -118,8 +142,10 @@ int main()
 
     // create grid and set initial state
     bool** life_grid = createGridArray(grid_width,grid_depth);
+    bool** buffer = createGridArray(grid_width, grid_depth);
     setInitialState(life_grid, init_file, grid_width, grid_depth);
     displayGrid(life_grid, grid_width, grid_depth);
+    writeNextFrame(life_grid, buffer, grid_width, grid_depth);
 
     init_file.close();
 
