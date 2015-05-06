@@ -10,16 +10,16 @@ using std::this_thread::sleep_for;
 #include <chrono>
 using std::chrono::seconds;
 
-#define TEST_FILE "init_samples/block.txt"
+#define TEST_FILE "init_samples/glider.txt"
 #define ALIVE '#'
 #define DEAD '.'
 
 
 // create 2D array to use as the grid
-bool** createGridArray(unsigned int grid_width, unsigned int grid_height)
+bool** createGridArray(int grid_width, int grid_height)
 {
     bool** grid_array_pointer = new bool*[grid_height];
-    for (unsigned int i = 0; i < grid_height; ++i) {
+    for (int i = 0; i < grid_height; ++i) {
         grid_array_pointer[i] = new bool[grid_width];
     }
     return grid_array_pointer;
@@ -28,13 +28,13 @@ bool** createGridArray(unsigned int grid_width, unsigned int grid_height)
 
 // set initial state of the grid
 // ADD AN EXCEPTION HERE
-void setInitialState(bool** grid, ifstream& init_file, unsigned int grid_width, unsigned int grid_height)
+void setInitialState(bool** grid, ifstream& init_file, int grid_width, int grid_height)
 {
     // get a line to represent each row and copy it into the grid
     string row;
-    for (unsigned int y = 0; y < grid_height; ++y) {
+    for (int y = 0; y < grid_height; ++y) {
         getline(init_file,row);
-        for (unsigned int x = 0; x < grid_width; ++x) {
+        for (int x = 0; x < grid_width; ++x) {
             if (row[x] == ALIVE) {
                 grid[y][x] = true;
             }
@@ -51,27 +51,28 @@ void setInitialState(bool** grid, ifstream& init_file, unsigned int grid_width, 
 
 // Sum the values of each neighboring cell in the grid and return it
 // Since the grid is a bool array, should be equal to number of live cells
-unsigned int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_height, int target_y, int target_x)
+int countNeighbors(bool** grid, int grid_width, int grid_height, int target_y, int target_x)
 {
-    unsigned int live_neighbors = 0;
+    int live_neighbors = 0;
     for (int y = target_y - 1; y <= target_y + 1; ++y) {
         for (int x = target_x - 1; x <= target_x + 1; ++x) {
             if (y == target_y && x == target_x) // ignore target itself
                 continue;
             // add length of row/column to offset effect of negative int in mod calculation
-            live_neighbors += grid[(y + grid_height) % grid_height][(x + grid_width) % grid_width];
+            if (grid[(y + grid_height) % grid_height][(x + grid_width) % grid_width])
+                ++live_neighbors;
         }
     }
     return live_neighbors;
 }
 
 
-void step(bool** grid, bool** buffer, unsigned int grid_width, unsigned int grid_height)
+void step(bool** grid, bool** buffer, int grid_width, int grid_height)
 {
-    unsigned int live_neighbors;
+    int live_neighbors;
 
-    for (unsigned int y = 0; y < grid_height; ++y) {
-        for (unsigned int x = 0; x < grid_width; ++x) {
+    for (int y = 0; y < grid_height; ++y) {
+        for (int x = 0; x < grid_width; ++x) {
             live_neighbors = countNeighbors(grid, grid_width, grid_height, y, x);
 
             // live cell with fewer than two live neighbors dies (under-population)
@@ -79,7 +80,7 @@ void step(bool** grid, bool** buffer, unsigned int grid_width, unsigned int grid
                 buffer[y][x] = false;
 
             // live cell with two or three live neighbors lives on to next generation
-            else if ((grid[y][x]) && (live_neighbors == 2 || live_neighbors == 3))
+            else if ((grid[y][x] && live_neighbors == 2) || (grid[y][x] && live_neighbors == 3))
                 buffer[y][x] = true;
 
             // live cell with more than three neighbors dies (over-population)
@@ -89,9 +90,6 @@ void step(bool** grid, bool** buffer, unsigned int grid_width, unsigned int grid
             // dead cell with exactly three live neighbors becomes a live cell (reproduction)
             else if (!grid[y][x] && live_neighbors == 3)
                 buffer[y][x] = true;
-
-            else
-                ;
         }
     }
 }
@@ -155,12 +153,14 @@ int main()
     WINDOW* game_window = createGameWindow(height, width, starty, startx);
     wrefresh(game_window);
 
+    printFrame(game_window, life_grid);
+
     // main game loop
     for (int t = 0; t < turns; ++t) {
-        printFrame(game_window, life_grid);
-        sleep_for(seconds(1));
         step(life_grid, buffer, width, height);
         swap(life_grid, buffer);
+        printFrame(game_window, life_grid);
+        sleep_for(seconds(1));
     }
 
     delwin(game_window);
