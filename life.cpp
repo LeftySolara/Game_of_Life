@@ -3,8 +3,14 @@
 using std::ifstream;
 #include <string>
 using std::string; using std::getline;
+#include <utility>
+using std::swap;
+#include <thread>
+using std::this_thread::sleep_for;
+#include <chrono>
+using std::chrono::seconds;
 
-#define TEST_FILE "init_samples/sample.txt"
+#define TEST_FILE "init_samples/block.txt"
 #define ALIVE '#'
 #define DEAD '.'
 
@@ -42,16 +48,66 @@ void setInitialState(bool** grid, ifstream& init_file, unsigned int grid_width, 
     }
 }
 
-// just a test function
-void showInitialState(WINDOW* win, bool** grid)
+
+// Sum the values of each neighboring cell in the grid and return it
+// Since the grid is a bool array, should be equal to number of live cells
+unsigned int countNeighbors(bool** grid, unsigned int grid_width, unsigned int grid_height, int target_y, int target_x)
 {
+    unsigned int live_neighbors = 0;
+    for (int y = target_y - 1; y <= target_y + 1; ++y) {
+        for (int x = target_x - 1; x <= target_x + 1; ++x) {
+            if (y == target_y && x == target_x) // ignore target itself
+                continue;
+            // add length of row/column to offset effect of negative int in mod calculation
+            live_neighbors += grid[(y + grid_height) % grid_height][(x + grid_width) % grid_width];
+        }
+    }
+    return live_neighbors;
+}
+
+
+void step(bool** grid, bool** buffer, unsigned int grid_width, unsigned int grid_height)
+{
+    unsigned int live_neighbors;
+
+    for (unsigned int y = 0; y < grid_height; ++y) {
+        for (unsigned int x = 0; x < grid_width; ++x) {
+            live_neighbors = countNeighbors(grid, grid_width, grid_height, y, x);
+
+            // live cell with fewer than two live neighbors dies (under-population)
+            if (grid[y][x] && live_neighbors < 2 )
+                buffer[y][x] = false;
+
+            // live cell with two or three live neighbors lives on to next generation
+            else if ((grid[y][x]) && (live_neighbors == 2 || live_neighbors == 3))
+                buffer[y][x] = true;
+
+            // live cell with more than three neighbors dies (over-population)
+            else if (grid[y][x] && live_neighbors > 3)
+                buffer[y][x] = false;
+
+            // dead cell with exactly three live neighbors becomes a live cell (reproduction)
+            else if (!grid[y][x] && live_neighbors == 3)
+                buffer[y][x] = true;
+
+            else
+                ;
+        }
+    }
+}
+
+
+void printFrame(WINDOW* win, bool** grid)
+{
+    wclear(win);
+
     int h, w;
     getmaxyx(win, h, w);
 
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
             if (grid[i][j])
-                mvwaddch(win, i, j, ACS_BLOCK);
+                mvwaddch(win, i, j, ALIVE);
         }
     }
     wrefresh(win);
@@ -68,6 +124,7 @@ WINDOW* createGameWindow(int height, int width, int starty, int startx)
 
     return win;
 }
+
 
 int main()
 {
@@ -87,6 +144,7 @@ int main()
     init_file.seekg(1, init_file.cur);
 
     bool** life_grid = createGridArray(width, height);
+    bool** buffer = createGridArray(width, height);
     setInitialState(life_grid, init_file, width, height);
     init_file.close();
 
@@ -96,9 +154,16 @@ int main()
 
     WINDOW* game_window = createGameWindow(height, width, starty, startx);
     wrefresh(game_window);
-    showInitialState(game_window, life_grid);
-    getch();
 
+    // main game loop
+    for (int t = 0; t < turns; ++t) {
+        printFrame(game_window, life_grid);
+        sleep_for(seconds(1));
+        step(life_grid, buffer, width, height);
+        swap(life_grid, buffer);
+    }
+
+    delwin(game_window);
     endwin();   // end curses mode
 
     return 0;
