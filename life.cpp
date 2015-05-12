@@ -3,16 +3,27 @@
 using std::ifstream;
 #include <string>
 using std::string; using std::getline;
-#include <utility>
-using std::swap;
 #include <thread>
 using std::this_thread::sleep_for;
 #include <chrono>
-using std::chrono::seconds;
+using std::chrono::milliseconds;
 
-#define TEST_FILE "init_samples/glider.txt"
+#define TEST_FILE "init_samples/glider_gun.txt"
 #define ALIVE '#'
 #define DEAD '.'
+
+/* To Do:
+
+    - create struct for game window that stores the grid size and number of turns
+    - add welcome screen
+    - add main menu with options:
+        - load state from file
+        - set state interactively
+        - quit
+    - add exceptions where noted
+    - make grid/buffer swap into own function
+
+*/
 
 
 // create 2D array to use as the grid
@@ -25,9 +36,8 @@ bool** createGridArray(int grid_width, int grid_height)
     return grid_array_pointer;
 }
 
-
 // set initial state of the grid
-// ADD AN EXCEPTION HERE
+// ADD AN EXCEPTION HERE FOR "FILE NOT FOUND"
 void setInitialState(bool** grid, ifstream& init_file, int grid_width, int grid_height)
 {
     // get a line to represent each row and copy it into the grid
@@ -48,17 +58,16 @@ void setInitialState(bool** grid, ifstream& init_file, int grid_width, int grid_
     }
 }
 
-
-// Sum the values of each neighboring cell in the grid and return it
-// Since the grid is a bool array, should be equal to number of live cells
+// return the number of neighboring cells that are alive
 int countNeighbors(bool** grid, int grid_width, int grid_height, int target_y, int target_x)
 {
     int live_neighbors = 0;
+
     for (int y = target_y - 1; y <= target_y + 1; ++y) {
         for (int x = target_x - 1; x <= target_x + 1; ++x) {
             if (y == target_y && x == target_x) // ignore target itself
                 continue;
-            // add length of row/column to offset effect of negative int in mod calculation
+            // add length of row/column to offset effect of negative integer in mod calculation
             if (grid[(y + grid_height) % grid_height][(x + grid_width) % grid_width])
                 ++live_neighbors;
         }
@@ -66,7 +75,7 @@ int countNeighbors(bool** grid, int grid_width, int grid_height, int target_y, i
     return live_neighbors;
 }
 
-
+// determine if cells live or die
 void step(bool** grid, bool** buffer, int grid_width, int grid_height)
 {
     int live_neighbors;
@@ -92,14 +101,20 @@ void step(bool** grid, bool** buffer, int grid_width, int grid_height)
                 buffer[y][x] = true;
         }
     }
-}
 
+    // write buffer to grid and clear buffer
+    for (int i = 0; i < grid_height; ++i) {
+        for (int j = 0; j < grid_width; ++j) {
+            grid[i][j] = buffer[i][j];
+            buffer[i][j] = false;
+        }
+    }
+}
 
 void printFrame(WINDOW* win, bool** grid)
 {
-    wclear(win);
-
     int h, w;
+    werase(win);
     getmaxyx(win, h, w);
 
     for (int i = 0; i < h; ++i) {
@@ -111,13 +126,10 @@ void printFrame(WINDOW* win, bool** grid)
     wrefresh(win);
 }
 
-
 WINDOW* createGameWindow(int height, int width, int starty, int startx)
 {
     WINDOW* win;
     win = newwin(height, width, starty, startx);
-
-    // box(win, 0, 0);
     wrefresh(win);
 
     return win;
@@ -129,12 +141,9 @@ int main()
     int turns, width, height;
 
     initscr();              // start curses mode
-    clear();
     noecho();
     cbreak();               // disable line buffering
-    keypad(stdscr, TRUE);   // get F keys
     curs_set(0);
-    refresh();
 
     ifstream init_file;
     init_file.open(TEST_FILE);
@@ -153,14 +162,11 @@ int main()
     WINDOW* game_window = createGameWindow(height, width, starty, startx);
     wrefresh(game_window);
 
-    printFrame(game_window, life_grid);
-
     // main game loop
     for (int t = 0; t < turns; ++t) {
-        step(life_grid, buffer, width, height);
-        swap(life_grid, buffer);
         printFrame(game_window, life_grid);
-        sleep_for(seconds(1));
+        sleep_for(milliseconds(150));
+        step(life_grid, buffer, width, height);
     }
 
     delwin(game_window);
