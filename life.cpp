@@ -75,6 +75,17 @@ int countNeighbors(bool** grid, int grid_width, int grid_height, int target_y, i
     return live_neighbors;
 }
 
+// write buffer to displayed grid, then clear it
+void bufferSwap(bool** grid, bool** buffer, int grid_width, int grid_height)
+{
+    for (int i = 0; i < grid_height; ++i) {
+        for (int j = 0; j < grid_width; ++j) {
+            grid[i][j] = buffer[i][j];
+            buffer[i][j] = false;
+        }
+    }
+}
+
 // determine if cells live or die
 void step(bool** grid, bool** buffer, int grid_width, int grid_height)
 {
@@ -101,14 +112,7 @@ void step(bool** grid, bool** buffer, int grid_width, int grid_height)
                 buffer[y][x] = true;
         }
     }
-
-    // write buffer to grid and clear buffer
-    for (int i = 0; i < grid_height; ++i) {
-        for (int j = 0; j < grid_width; ++j) {
-            grid[i][j] = buffer[i][j];
-            buffer[i][j] = false;
-        }
-    }
+    bufferSwap(grid, buffer, grid_width, grid_height);
 }
 
 void printFrame(WINDOW* win, bool** grid)
