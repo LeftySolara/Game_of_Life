@@ -1,3 +1,6 @@
+#include <string>
+using std::string;
+
 #ifndef GAME_BOARD_H
 #define GAME_BOARD_H
 
@@ -10,16 +13,15 @@ private:
     bool** buffer;
     bool** create_grid_array(int width, int height);
 public:
-    // Constructors & Destructor
-    GameBoard(int width, int height);                           // create array full of false values
-    GameBoard(int width, int height, const char* filename[]);   // create and initialize
+    // Constructor & Destructor
+    GameBoard(int width, int height);
     ~GameBoard();
 
     // Member Functions
     void step();
-    void grid_swap();
-    void set_state(const char* filename[]);     // change grid to match given file
-    int count_live_neighbors(int x, int y);     // count number of live neighbors
+    void buffer_swap();
+    void set_state(string filename);            // change grid to match given file
+    int count_live_neighbors(int target_x, int target_y);     // count number of live neighbors
 
     // Accessors
     int get_width()  { return width; }
