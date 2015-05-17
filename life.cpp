@@ -8,22 +8,9 @@ using std::this_thread::sleep_for;
 #include <chrono>
 using std::chrono::milliseconds;
 
-#define TEST_FILE "init_samples/glider_gun.txt"
+#define INIT_FILE "init_samples/glider_gun.txt"
 #define ALIVE '#'
 #define DEAD '.'
-
-/* To Do:
-
-    - create struct for game window that stores the grid size and number of turns
-    - add welcome screen
-    - add main menu with options:
-        - load state from file
-        - set state interactively
-        - quit
-    - add exceptions where noted
-    - make grid/buffer swap into own function
-
-*/
 
 
 // create 2D array to use as the grid
@@ -37,7 +24,6 @@ bool** createGridArray(int grid_width, int grid_height)
 }
 
 // set initial state of the grid
-// ADD AN EXCEPTION HERE FOR "FILE NOT FOUND"
 void setInitialState(bool** grid, ifstream& init_file, int grid_width, int grid_height)
 {
     // get a line to represent each row and copy it into the grid
@@ -50,9 +36,6 @@ void setInitialState(bool** grid, ifstream& init_file, int grid_width, int grid_
             }
             else if (row[x] == DEAD) {
                 grid[y][x] = false;
-            }
-            else {
-                // raise not_implemented_error;
             }
         }
     }
@@ -139,7 +122,6 @@ WINDOW* createGameWindow(int height, int width, int starty, int startx)
     return win;
 }
 
-
 int main()
 {
     int turns, width, height;
@@ -150,7 +132,7 @@ int main()
     curs_set(0);
 
     ifstream init_file;
-    init_file.open(TEST_FILE);
+    init_file.open(INIT_FILE);
     init_file >> turns >> width >> height;
     init_file.seekg(1, init_file.cur);
 
@@ -169,7 +151,7 @@ int main()
     // main game loop
     for (int t = 0; t < turns; ++t) {
         printFrame(game_window, life_grid);
-        sleep_for(milliseconds(150));
+        sleep_for(milliseconds(125));
         step(life_grid, buffer, width, height);
     }
 
